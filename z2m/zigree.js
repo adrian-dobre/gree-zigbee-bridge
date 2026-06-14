@@ -14,8 +14,8 @@
 // features purely for the Apple Home / HomeKit "AC" tile:
 //   * fan_mode  -> the HeaterCooler "Fan Speed" slider
 //   * swing_mode -> the HeaterCooler oscillate toggle (on = vertical swing,
-//     off = louver held in the middle). swing_mode is just a friendly view of
-//     the same acLouverPosition attribute, so both controls stay in sync.
+//     off = louver parked at a fixed angle). swing_mode is just a friendly view
+//     of the same acLouverPosition attribute, so both controls stay in sync.
 //
 // Install: copy this file somewhere Zigbee2MQTT can read it and reference it from
 // configuration.yaml:

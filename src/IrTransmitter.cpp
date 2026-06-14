@@ -10,8 +10,7 @@ namespace {
 // the 15-bit (32767 us) per-phase limit, so each duration maps to one tick.
 constexpr uint32_t kRmtResolutionHz = 1'000'000;
 
-// Carrier duty cycle. ~1/3 is the usual value for IR LEDs and matches what the
-// IRremoteESP8266 stack used.
+// Carrier duty cycle. ~1/3 is the usual value for IR LEDs.
 constexpr float kCarrierDuty = 0.33f;
 
 // Without DMA the ESP32-C6 RMT TX channel holds up to this many symbols; the

@@ -123,6 +123,24 @@ temperature, current humidity).
 > the ZCL spec, and asking the firmware to report them can crash the underlying
 > zboss stack. They are read on demand instead.
 
+### Vertical louver / swing
+
+The AC's vertical louver is exposed through the ZCL `ac_louver_position`
+attribute. Because the YT1F remote distinguishes continuous swing from several
+fixed angles, the converter maps the louver enum values as follows:
+
+| `ac_louver_position`  | Louver behaviour       |
+| --------------------- | ---------------------- |
+| `fully_closed`        | continuous vertical swing |
+| `quarter_open`        | fixed — up             |
+| `half_open`           | fixed — middle         |
+| `three_quarters_open` | fixed — middle-down    |
+| `fully_open`          | fixed — down           |
+
+In Apple Home the climate **oscillate** toggle is wired to this: turning it on
+starts the swing (`fully_closed`), turning it off parks the louver at the
+quarter-open (up) angle.
+
 ## Roadmap
 
 - [x] Zigbee end-device firmware exposing the AC clusters
@@ -130,5 +148,5 @@ temperature, current humidity).
 - [x] Zigbee2MQTT external converter
 - [x] Gree YT1F IR encoder + native RMT transmitter
 - [x] SHT4x temperature/humidity sensor
-- [ ] Verify IR control against the physical unit
+- [x] Verify IR control against the physical unit
 - [ ] Optional iFeel room-temperature reporting to the AC

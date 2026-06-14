@@ -30,7 +30,7 @@ inline constexpr uint8_t kBootButtonPin = 9;
 
 // IR blaster signal pin (drives the IR LED, via a transistor). D9 / GPIO20,
 // matching the reference gree-g10-ac-rc wiring. Non-inverted: carrier-on
-// drives the pin high (standard IRremoteESP8266 behaviour).
+// drives the pin high.
 inline constexpr uint8_t kIrTxPin = 20;
 inline constexpr uint32_t kIrCarrierHz = 38000;  // Gree uses a 38 kHz carrier.
 
