@@ -1,0 +1,9 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "pio": true,
+        "awk": true,
+        "~/.platformio/penv/bin/pio": true,
+        "~/.platformio/penv/bin/python": true,
+        "tee": true
+    }
+}
