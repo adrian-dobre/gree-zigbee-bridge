@@ -1,0 +1,53 @@
+
+This directory is intended for project header files.
+
+A header file is a file containing C declarations and macro definitions
+to be shared between several project source files. You request the use of a
+header file in your project source file (C, C++, etc) located in `src` folder
+by including it, with the C preprocessing directive `#include'.
+
+```src/main.c
+
+#include "header.h"
+
+int main (void)
+{
+ ...
+}
+```
+
+Including a header file produces the same results as copying the header file
+into each source file that needs it. Such copying would be time-consuming
+and error-prone. With a header file, the related declarations appear
+in only one place. If they need to be changed, they can be changed in one
+place, and programs that include the header file will automatically use the
+new version when next recompiled. The header file eliminates the labor of
+finding and changing all the copies as well as the risk that a failure to
+find one copy will result in inconsistencies within a program.
+
+In C, the convention is to give header files names that end with `.h'.
+
+Read more about using header files in official GCC documentation:
+
+* Include Syntax
+* Include Operation
+* Once-Only Headers
+* Computed Includes
+
+https://gcc.gnu.org/onlinedocs/cpp/Header-Files.html
+
+
+el prompt :))
+
+>I want to build a zigbee to IR bridge for my Gree AC device. This device would appear on the zigbee network as an AC and I want to be able to have the following:
+
+control mode (heat/cool/auto/dehumidify)
+fan speed
+vertical oscillation
+target temp
+read current temp
+read current humidity
+on/off
+I'm using xiao studio esp32c6
+
+for now I don't want the IR/sensor reading to do anything, use hardcoded values and print to console; I want to first play with the zigbee integration (z2m) first - don't want to add sensors and IR transmitter for now
