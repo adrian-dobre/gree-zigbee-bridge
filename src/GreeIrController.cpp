@@ -4,7 +4,7 @@
 
 #include "GreeYtProtocol.h"
 
-namespace zigree {
+namespace greebridge {
 
 namespace {
 // The original YT1F remote repeats every command; mirror that for reliability.
@@ -31,7 +31,7 @@ void GreeIrController::apply(const AcState& state) {
         "[IR] Sent state: power=%s mode=%u fan=%u swing=%u temp=%uC\n",
         state.power ? "ON" : "OFF", static_cast<unsigned>(state.mode),
         static_cast<unsigned>(state.fan), static_cast<unsigned>(state.swing),
-        state.targetTempC);
+        state.activeTempC());
 }
 
 void GreeIrController::reportRoomTemperature(uint8_t roomTempC) {
@@ -41,4 +41,4 @@ void GreeIrController::reportRoomTemperature(uint8_t roomTempC) {
     Serial.printf("[IR] Sent iFeel room temperature: %uC\n", roomTempC);
 }
 
-}  // namespace zigree
+}  // namespace greebridge

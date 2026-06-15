@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-namespace zigree {
+namespace greebridge {
 
 // ---------------------------------------------------------------------------
 // Canonical, hardware-neutral description of the air conditioner's state.
@@ -47,13 +47,22 @@ struct AcState {
     Mode mode = Mode::Cool;
     FanSpeed fan = FanSpeed::Auto;
     Swing swing = Swing::Auto;
-    uint8_t targetTempC = 24;  // valid range 16..30
+    uint8_t coolTempC = 24;  // cooling setpoint, valid range 16..30
+    uint8_t heatTempC = 24;  // heating setpoint, valid range 16..30
+
+    // The AC takes a single target temperature per IR frame. The thermostat
+    // cluster keeps cooling and heating setpoints independently; pick the one
+    // that matches the active mode (heating uses the heat setpoint, every other
+    // mode uses the cool setpoint).
+    uint8_t activeTempC() const {
+        return mode == Mode::Heat ? heatTempC : coolTempC;
+    }
 
     bool operator==(const AcState& o) const {
         return power == o.power && mode == o.mode && fan == o.fan &&
-               swing == o.swing && targetTempC == o.targetTempC;
+               swing == o.swing && activeTempC() == o.activeTempC();
     }
     bool operator!=(const AcState& o) const { return !(*this == o); }
 };
 
-}  // namespace zigree
+}  // namespace greebridge

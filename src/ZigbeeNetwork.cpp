@@ -6,7 +6,7 @@
 #include "Config.h"
 #include "esp_partition.h"
 
-namespace zigree {
+namespace greebridge {
 
 namespace {
 
@@ -33,7 +33,7 @@ void maybeResetZigbeeNetwork() {
     bool button_held = (digitalRead(kBootButtonPin) == LOW);
 
     Preferences prefs;
-    prefs.begin("zigree", false);
+    prefs.begin("greebridge", false);
     bool already_reset = prefs.getBool("zb_cleared", false);
 
     if (button_held || !already_reset) {
@@ -45,4 +45,4 @@ void maybeResetZigbeeNetwork() {
     prefs.end();
 }
 
-}  // namespace zigree
+}  // namespace greebridge

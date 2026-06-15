@@ -14,7 +14,7 @@
 #include "ZigbeeNetwork.h"
 
 // ---------------------------------------------------------------------------
-// Zigree — Zigbee bridge for a Gree air conditioner (remote YT1F / G10).
+// GreeBridge — Zigbee bridge for a Gree air conditioner (remote YT1F / G10).
 //
 // Orchestration only. It wires together the three components, each of which
 // lives in its own module:
@@ -23,7 +23,7 @@
 //   - ClimateSensor        : room temperature/humidity (SHT4x or simulated)
 // ---------------------------------------------------------------------------
 
-using namespace zigree;
+using namespace greebridge;
 
 static GreeClimateEndpoint greeEndpoint(kZigbeeEndpoint);
 static GreeIrController irController(kIrTxPin, kIrCarrierHz);
@@ -39,7 +39,7 @@ static uint32_t lastStateChangeMs = 0;
 void setup() {
     Serial.begin(115200);
     delay(100);
-    Serial.println("\nStarting Zigree (Gree G10 / YT1F Zigbee bridge)...");
+    Serial.println("\nStarting GreeBridge (Gree G10 / YT1F Zigbee bridge)...");
     delay(2000);
 
     maybeResetZigbeeNetwork();

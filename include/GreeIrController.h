@@ -3,7 +3,7 @@
 #include "GreeAcState.h"
 #include "IrTransmitter.h"
 
-namespace zigree {
+namespace greebridge {
 
 // ---------------------------------------------------------------------------
 // Drives the Gree AC over infrared. Owns the IR transmitter and the YT1F
@@ -30,4 +30,4 @@ class GreeIrController {
     bool _ready = false;
 };
 
-}  // namespace zigree
+}  // namespace greebridge

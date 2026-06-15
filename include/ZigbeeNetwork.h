@@ -1,6 +1,6 @@
 #pragma once
 
-namespace zigree {
+namespace greebridge {
 
 // ---------------------------------------------------------------------------
 // Helpers for managing the zboss network-state partitions.
@@ -17,4 +17,4 @@ namespace zigree {
 // device does not loop re-pairing.
 void maybeResetZigbeeNetwork();
 
-}  // namespace zigree
+}  // namespace greebridge

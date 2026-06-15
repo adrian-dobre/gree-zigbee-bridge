@@ -4,7 +4,7 @@
 
 #include <SensirionI2cSht4x.h>
 
-namespace zigree {
+namespace greebridge {
 
 struct ClimateReading {
     float temperatureC;
@@ -28,4 +28,4 @@ class ClimateSensor {
     bool _ready = false;
 };
 
-}  // namespace zigree
+}  // namespace greebridge

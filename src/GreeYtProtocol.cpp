@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-namespace zigree {
+namespace greebridge {
 
 namespace {
 
@@ -93,7 +93,7 @@ void GreeYtProtocol::buildPayload(const AcState& state, uint8_t buffer[9]) {
 
     // Temperature: valid 16..30, encoded as (tempC - 16). AUTO forces 25; DRY
     // forces fan speed 1 (per the original remote's behaviour).
-    uint8_t tempC = state.targetTempC;
+    uint8_t tempC = state.activeTempC();
     if (tempC < 16) tempC = 16;
     if (tempC > 30) tempC = 30;
     if (state.mode == Mode::Auto) tempC = 25;
@@ -196,4 +196,4 @@ void GreeYtProtocol::encodeIFeelTemperature(uint8_t roomTempC,
     tx.space(0);
 }
 
-}  // namespace zigree
+}  // namespace greebridge

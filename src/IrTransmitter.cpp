@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-namespace zigree {
+namespace greebridge {
 
 namespace {
 
@@ -140,4 +140,4 @@ void IrTransmitter::sendFrame() {
     rmt_tx_wait_all_done(_channel, 200);
 }
 
-}  // namespace zigree
+}  // namespace greebridge

@@ -6,7 +6,7 @@
 
 #include "Config.h"
 
-namespace zigree {
+namespace greebridge {
 
 namespace {
 
@@ -144,14 +144,16 @@ GreeClimateEndpoint::GreeClimateEndpoint(uint8_t endpoint) : ZigbeeEP(endpoint) 
     _state.mode = Mode::Cool;
     _state.fan = FanSpeed::Auto;
     _state.swing = Swing::Auto;
-    _state.targetTempC = kInitialTargetTempC;
+    _state.coolTempC = kInitialTargetTempC;
+    _state.heatTempC = kInitialTargetTempC;
 
     _localTemperature = toZclTemperature(25.0f);
     _humidity = static_cast<uint16_t>(toZclTemperature(47.0f));
 }
 
 void GreeClimateEndpoint::buildClusters() {
-    int16_t setpoint = static_cast<int16_t>(_state.targetTempC * 100);
+    int16_t cool_setpoint = static_cast<int16_t>(_state.coolTempC * 100);
+    int16_t heat_setpoint = static_cast<int16_t>(_state.heatTempC * 100);
     uint8_t system_mode = toZclSystemMode(_state);
     uint8_t fan_mode = toZclFanMode(_state.fan);
     uint8_t louver = toZclLouver(_state.swing);
@@ -159,8 +161,8 @@ void GreeClimateEndpoint::buildClusters() {
 
     esp_zb_thermostat_cfg_t thermostat_cfg = ESP_ZB_DEFAULT_THERMOSTAT_CONFIG();
     thermostat_cfg.thermostat_cfg.local_temperature = _localTemperature;
-    thermostat_cfg.thermostat_cfg.occupied_cooling_setpoint = setpoint;
-    thermostat_cfg.thermostat_cfg.occupied_heating_setpoint = setpoint;
+    thermostat_cfg.thermostat_cfg.occupied_cooling_setpoint = cool_setpoint;
+    thermostat_cfg.thermostat_cfg.occupied_heating_setpoint = heat_setpoint;
     thermostat_cfg.thermostat_cfg.control_sequence_of_operation =
         kControlSequence;
     thermostat_cfg.thermostat_cfg.system_mode = system_mode;
@@ -243,11 +245,12 @@ void GreeClimateEndpoint::buildClusters() {
 
 void GreeClimateEndpoint::printState() const {
     Serial.printf(
-        "AC State: power=%s mode=%u fan=%u swing=%u target=%uC | room=%.2fC "
-        "humidity=%.2f%%\n",
+        "AC State: power=%s mode=%u fan=%u swing=%u cool=%uC heat=%uC | "
+        "room=%.2fC humidity=%.2f%%\n",
         _state.power ? "ON" : "OFF", static_cast<unsigned>(_state.mode),
         static_cast<unsigned>(_state.fan), static_cast<unsigned>(_state.swing),
-        _state.targetTempC, _localTemperature / 100.0f, _humidity / 100.0f);
+        _state.coolTempC, _state.heatTempC, _localTemperature / 100.0f,
+        _humidity / 100.0f);
 }
 
 void GreeClimateEndpoint::publishClimate(float temperatureC, float humidityPct) {
@@ -320,8 +323,18 @@ void GreeClimateEndpoint::handleThermostat(uint16_t attr, uint8_t type,
         long tempC = lround(value / 100.0);
         if (tempC < 16) tempC = 16;
         if (tempC > 30) tempC = 30;
-        _state.targetTempC = static_cast<uint8_t>(tempC);
-        Serial.printf("[Zigbee] Setpoint -> %uC\n", _state.targetTempC);
+        // The cluster keeps cooling and heating setpoints independently; store
+        // whichever one was written. The IR layer later selects the setpoint
+        // matching the active mode (see AcState::activeTempC).
+        if (attr == ESP_ZB_ZCL_ATTR_THERMOSTAT_OCCUPIED_HEATING_SETPOINT_ID) {
+            _state.heatTempC = static_cast<uint8_t>(tempC);
+            Serial.printf("[Zigbee] Heating setpoint -> %uC\n",
+                          _state.heatTempC);
+        } else {
+            _state.coolTempC = static_cast<uint8_t>(tempC);
+            Serial.printf("[Zigbee] Cooling setpoint -> %uC\n",
+                          _state.coolTempC);
+        }
         notifyStateChanged();
     } else if (attr == ESP_ZB_ZCL_ATTR_THERMOSTAT_AC_LOUVER_POSITION_ID &&
                type == ESP_ZB_ZCL_ATTR_TYPE_8BIT_ENUM) {
@@ -365,4 +378,4 @@ void GreeClimateEndpoint::zbAttributeSet(
     }
 }
 
-}  // namespace zigree
+}  // namespace greebridge

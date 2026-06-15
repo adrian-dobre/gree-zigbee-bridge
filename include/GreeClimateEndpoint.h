@@ -5,7 +5,7 @@
 #include "GreeAcState.h"
 #include "Zigbee.h"
 
-namespace zigree {
+namespace greebridge {
 
 // ---------------------------------------------------------------------------
 // Zigbee Heating/Cooling endpoint for the Gree AC.
@@ -63,4 +63,4 @@ class GreeClimateEndpoint : public ZigbeeEP {
     StateChangedCallback _onStateChanged;
 };
 
-}  // namespace zigree
+}  // namespace greebridge

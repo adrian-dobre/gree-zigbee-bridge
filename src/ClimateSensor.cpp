@@ -5,7 +5,7 @@
 
 #include "Config.h"
 
-namespace zigree {
+namespace greebridge {
 
 bool ClimateSensor::begin() {
     Wire.begin(kI2cSdaPin, kI2cSclPin);
@@ -34,4 +34,4 @@ bool ClimateSensor::read(ClimateReading& out) {
     return true;
 }
 
-}  // namespace zigree
+}  // namespace greebridge

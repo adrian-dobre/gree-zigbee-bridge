@@ -3,19 +3,19 @@
 #include <stdint.h>
 
 // ---------------------------------------------------------------------------
-// Zigree — a Zigbee bridge for Gree air conditioners (remote YT1F / G10).
+// GreeBridge — a Zigbee bridge for Gree air conditioners (remote YT1F / G10).
 //
 // Central place for the few hardware- and integration-specific values. Tweak
 // the pins and feature flags here when wiring up the IR blaster and the
 // temperature/humidity sensor.
 // ---------------------------------------------------------------------------
 
-namespace zigree {
+namespace greebridge {
 
 // --- Zigbee identity -------------------------------------------------------
 // NOTE: changing the model string requires re-pairing the device in
 // Zigbee2MQTT (the external converter matches on this exact string).
-inline constexpr char kManufacturer[] = "Zigree";
+inline constexpr char kManufacturer[] = "GreeBridge";
 inline constexpr char kModel[] = "GreeG10-YT1F";
 
 inline constexpr uint8_t kZigbeeEndpoint = 1;
@@ -63,4 +63,4 @@ inline constexpr uint32_t kIrDebounceMs = 400;
 // --- Initial AC state ------------------------------------------------------
 inline constexpr uint8_t kInitialTargetTempC = 24;  // 16..30
 
-}  // namespace zigree
+}  // namespace greebridge

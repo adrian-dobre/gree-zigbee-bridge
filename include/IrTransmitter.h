@@ -6,7 +6,7 @@
 
 #include <driver/rmt_tx.h>
 
-namespace zigree {
+namespace greebridge {
 
 // ---------------------------------------------------------------------------
 // IR transmitter for consumer-IR remote frames. Frames are described as an
@@ -57,4 +57,4 @@ class IrTransmitter {
     std::vector<rmt_symbol_word_t> _symbols;
 };
 
-}  // namespace zigree
+}  // namespace greebridge

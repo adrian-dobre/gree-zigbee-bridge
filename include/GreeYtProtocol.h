@@ -5,7 +5,7 @@
 #include "GreeAcState.h"
 #include "IrTransmitter.h"
 
-namespace zigree {
+namespace greebridge {
 
 // ---------------------------------------------------------------------------
 // Gree YT1F (a.k.a. "GREE_YT") infrared protocol encoder.
@@ -32,4 +32,4 @@ class GreeYtProtocol {
     static void sendByteLsbFirst(uint8_t value, IrTransmitter& tx);
 };
 
-}  // namespace zigree
+}  // namespace greebridge

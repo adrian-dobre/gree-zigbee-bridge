@@ -1,6 +1,6 @@
-// Zigbee2MQTT external converter for Zigree — the Gree AC Zigbee-to-IR bridge.
+// Zigbee2MQTT external converter for GreeBridge — the Gree AC Zigbee-to-IR bridge.
 //
-// Device firmware: src/main.cpp (manufacturer "Zigree", model "GreeG10-YT1F").
+// Device firmware: src/main.cpp (manufacturer "GreeBridge", model "GreeG10-YT1F").
 // Single endpoint (1) exposing:
 //   genOnOff (0x0006)                 -> power on/off
 //   hvacThermostat (0x0201)           -> system mode, cooling/heating setpoints,
@@ -20,7 +20,7 @@
 // Install: copy this file somewhere Zigbee2MQTT can read it and reference it from
 // configuration.yaml:
 //   external_converters:
-//     - zigree.js
+//     - greebridge.js
 // then restart Zigbee2MQTT.
 
 const fz = require('zigbee-herdsman-converters/converters/fromZigbee');
@@ -30,7 +30,7 @@ const reporting = require('zigbee-herdsman-converters/lib/reporting');
 const e = exposes.presets;
 const ea = exposes.access;
 
-// Fan speeds exposed by Zigree, mapped to ZCL hvacFanCtrl fanMode values.
+// Fan speeds exposed by GreeBridge, mapped to ZCL hvacFanCtrl fanMode values.
 // "turbo" reuses the SMART (0x06) slot and the firmware decodes it back to the
 // AC's turbo / maximum-airflow setting. In Apple Home the climate fan_mode
 // feature becomes the HeaterCooler "Fan Speed" slider.
@@ -66,7 +66,11 @@ const fzLocal = {
             if (msg.data.fanMode === undefined) return;
             const mode = fanModeByValue[msg.data.fanMode];
             if (mode === undefined) return;
-            return {fan_mode: mode, fan_state: mode === 'off' ? 'OFF' : 'ON'};
+            return {
+                fan_mode: mode,
+                fan_state: mode === 'off' ? 'OFF' : 'ON',
+                turbo: mode === 'turbo' ? 'ON' : 'OFF',
+            };
         },
     },
     // Publish the granular louver position AND the derived swing_mode so the
@@ -98,7 +102,33 @@ const tzLocal = {
             }
             await entity.write('hvacFanCtrl', {fanMode});
             return {state: {fan_mode: mode,
-                fan_state: mode === 'off' ? 'OFF' : 'ON'}};
+                fan_state: mode === 'off' ? 'OFF' : 'ON',
+                turbo: mode === 'turbo' ? 'ON' : 'OFF'}};
+        },
+        convertGet: async (entity, key, meta) => {
+            await entity.read('hvacFanCtrl', ['fanMode']);
+        },
+    },
+    // Dedicated turbo toggle, backed by the same fanMode attribute. HomeKit's
+    // fan-speed slider does not reliably reach the top "turbo" detent, so this
+    // gives Apple Home a separate, dependable switch. Turning turbo off reverts
+    // to the previous (non-turbo) fan mode, defaulting to auto.
+    turbo: {
+        key: ['turbo'],
+        convertSet: async (entity, key, value, meta) => {
+            const on = value === true || String(value).toLowerCase() === 'on';
+            let mode = 'turbo';
+            if (!on) {
+                const prev = meta.state && meta.state.fan_mode;
+                mode = prev && prev !== 'turbo' ? prev : 'auto';
+            }
+            const fanMode = fanModeMap[mode];
+            await entity.write('hvacFanCtrl', {fanMode});
+            return {state: {
+                turbo: on ? 'ON' : 'OFF',
+                fan_mode: mode,
+                fan_state: mode === 'off' ? 'OFF' : 'ON',
+            }};
         },
         convertGet: async (entity, key, meta) => {
             await entity.read('hvacFanCtrl', ['fanMode']);
@@ -148,7 +178,7 @@ const tzLocal = {
 const definition = {
     zigbeeModel: ['GreeG10-YT1F'],
     model: 'GreeG10-YT1F',
-    vendor: 'Zigree',
+    vendor: 'GreeBridge',
     description: 'Gree G10 air conditioner (YT1F remote) Zigbee-to-IR bridge',
     fromZigbee: [
         fz.on_off,
@@ -166,20 +196,26 @@ const definition = {
         tz.thermostat_local_temperature,
         tzLocal.ac_louver_position,
         tzLocal.fan_mode,
+        tzLocal.turbo,
         tzLocal.swing_mode,
     ],
     exposes: [
         e.switch(),
         e.climate()
             .withLocalTemperature()
-            .withSetpoint('occupied_cooling_setpoint', 16, 30, 0.5)
-            .withSetpoint('occupied_heating_setpoint', 16, 30, 0.5)
+            .withSetpoint('occupied_cooling_setpoint', 16, 30, 1)
+            .withSetpoint('occupied_heating_setpoint', 16, 30, 1)
             .withSystemMode(['off', 'auto', 'cool', 'heat', 'dry', 'fan_only'])
-            .withFanMode(['off', 'low', 'medium', 'high', 'auto', 'turbo'])
+            .withFanMode(['off', 'low', 'medium', 'high', 'turbo', 'auto'])
             // Apple Home oscillate toggle: on = vertical swing, off = fixed.
             .withSwingMode(['off', 'on']),
         e.temperature(),
         e.humidity(),
+        // Dedicated turbo / maximum-airflow toggle. Backed by the same fanMode
+        // attribute as fan_mode; exposed separately because HomeKit's fan-speed
+        // slider cannot reliably select the top "turbo" step.
+        e.binary('turbo', ea.ALL, 'ON', 'OFF')
+            .withDescription('Turbo / maximum airflow'),
         // The YT1F protocol maps "fully_closed" to continuous vertical swing
         // and the remaining positions to fixed louver angles (fully_open =
         // down, three_quarters_open = middle-down, half_open = middle,

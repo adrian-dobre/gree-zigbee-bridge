@@ -1,4 +1,4 @@
-# Zigree — Gree G10 Zigbee-to-IR bridge
+# GreeBridge — Gree G10 Zigbee-to-IR bridge
 
 A Zigbee-to-IR bridge for a **Gree G10 air conditioner** (remote **YT1F**),
 running on a **Seeed XIAO ESP32-C6**. The device joins your Zigbee network and
@@ -52,7 +52,7 @@ build flags if needed:
 
 ## Exposed Zigbee clusters
 
-Single endpoint (`1`), manufacturer `Zigree`, model `GreeG10-YT1F`:
+Single endpoint (`1`), manufacturer `GreeBridge`, model `GreeG10-YT1F`:
 
 | Cluster                       | ID       | Purpose                                          |
 | ----------------------------- | -------- | ------------------------------------------------ |
@@ -86,7 +86,7 @@ Serial output is `115200` baud.
 1. Enable joining in Zigbee2MQTT (**Permit join**).
 2. Power up / reset the board. On first boot after flashing, the firmware clears
    any stored Zigbee network state and starts a fresh join.
-3. The device appears as model `GreeG10-YT1F` (vendor `Zigree`).
+3. The device appears as model `GreeG10-YT1F` (vendor `GreeBridge`).
 4. Because this is a custom device, install the included **external converter**
    so Z2M renders the climate/fan/swing controls — see below. Without it, Z2M
    still pairs the device but only shows raw clusters.
@@ -104,16 +104,16 @@ state is erased and the device re-commissions.
 
 ## Zigbee2MQTT external converter
 
-A converter is provided at [z2m/zigree.js](z2m/zigree.js). It maps the device's
+A converter is provided at [z2m/greebridge.js](z2m/greebridge.js). It maps the device's
 clusters to Z2M exposes (climate, fan, vertical swing/louver, on/off, current
 temperature, current humidity).
 
-1. Copy `z2m/zigree.js` into your Zigbee2MQTT data directory.
+1. Copy `z2m/greebridge.js` into your Zigbee2MQTT data directory.
 2. Reference it from `configuration.yaml`:
 
    ```yaml
    external_converters:
-     - zigree.js
+     - greebridge.js
    ```
 
 3. Restart Zigbee2MQTT.
