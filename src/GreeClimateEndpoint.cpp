@@ -223,21 +223,26 @@ void GreeClimateEndpoint::buildClusters() {
         thermostat_cluster, ESP_ZB_ZCL_ATTR_THERMOSTAT_AC_LOUVER_POSITION_ID,
         &louver);
     // Lower the cooling setpoint floor so 16 C is accepted (see
-    // kCoolSetpointMinLimit). MinCool must stay within AbsMinCool, so set both.
-    // esp_zb_thermostat_cluster_create() already declares the standard
-    // setpoint-limit attributes with their defaults (cool floor 0x0640 = 16 C),
-    // so these must be *updated*, not added.
+    // kCoolSetpointMinLimit). ZBOSS rejects a cooling-setpoint write below its
+    // built-in cool floor (0x0640 = 16.00 C) with INVALID_VALUE. The
+    // thermostat-specific add/update helpers don't accept the setpoint-limit
+    // attribute IDs, so the attributes are otherwise absent; declare them with
+    // the generic attribute API so ZBOSS validates against our lower floor.
+    // AbsMinCool is read-only and MinCool is read/write per the ZCL spec.
     int16_t cool_min_limit = kCoolSetpointMinLimit;
-    esp_err_t abs_min_err = esp_zb_cluster_update_attr(
-        thermostat_cluster,
+    esp_err_t abs_min_err = esp_zb_cluster_add_attr(
+        thermostat_cluster, ESP_ZB_ZCL_CLUSTER_ID_THERMOSTAT,
         ESP_ZB_ZCL_ATTR_THERMOSTAT_ABS_MIN_COOL_SETPOINT_LIMIT_ID,
+        ESP_ZB_ZCL_ATTR_TYPE_S16, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY,
         &cool_min_limit);
-    esp_err_t min_err = esp_zb_cluster_update_attr(
-        thermostat_cluster,
-        ESP_ZB_ZCL_ATTR_THERMOSTAT_MIN_COOL_SETPOINT_LIMIT_ID, &cool_min_limit);
+    esp_err_t min_err = esp_zb_cluster_add_attr(
+        thermostat_cluster, ESP_ZB_ZCL_CLUSTER_ID_THERMOSTAT,
+        ESP_ZB_ZCL_ATTR_THERMOSTAT_MIN_COOL_SETPOINT_LIMIT_ID,
+        ESP_ZB_ZCL_ATTR_TYPE_S16, ESP_ZB_ZCL_ATTR_ACCESS_READ_WRITE,
+        &cool_min_limit);
     if (abs_min_err != ESP_OK || min_err != ESP_OK) {
         Serial.printf(
-            "[Zigbee] Failed to lower cool setpoint floor (abs=0x%x min=0x%x)\n",
+            "[Zigbee] Failed to add cool setpoint limit attrs (abs=0x%x min=0x%x)\n",
             static_cast<int>(abs_min_err), static_cast<int>(min_err));
     }
     addCluster("thermostat", esp_zb_cluster_list_add_thermostat_cluster(
