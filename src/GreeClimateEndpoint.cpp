@@ -224,14 +224,22 @@ void GreeClimateEndpoint::buildClusters() {
         &louver);
     // Lower the cooling setpoint floor so 16 C is accepted (see
     // kCoolSetpointMinLimit). MinCool must stay within AbsMinCool, so set both.
+    // esp_zb_thermostat_cluster_create() already declares the standard
+    // setpoint-limit attributes with their defaults (cool floor 0x0640 = 16 C),
+    // so these must be *updated*, not added.
     int16_t cool_min_limit = kCoolSetpointMinLimit;
-    esp_zb_thermostat_cluster_add_attr(
+    esp_err_t abs_min_err = esp_zb_cluster_update_attr(
         thermostat_cluster,
         ESP_ZB_ZCL_ATTR_THERMOSTAT_ABS_MIN_COOL_SETPOINT_LIMIT_ID,
         &cool_min_limit);
-    esp_zb_thermostat_cluster_add_attr(
+    esp_err_t min_err = esp_zb_cluster_update_attr(
         thermostat_cluster,
         ESP_ZB_ZCL_ATTR_THERMOSTAT_MIN_COOL_SETPOINT_LIMIT_ID, &cool_min_limit);
+    if (abs_min_err != ESP_OK || min_err != ESP_OK) {
+        Serial.printf(
+            "[Zigbee] Failed to lower cool setpoint floor (abs=0x%x min=0x%x)\n",
+            static_cast<int>(abs_min_err), static_cast<int>(min_err));
+    }
     addCluster("thermostat", esp_zb_cluster_list_add_thermostat_cluster(
                                  _cluster_list, thermostat_cluster,
                                  ESP_ZB_ZCL_CLUSTER_SERVER_ROLE));
