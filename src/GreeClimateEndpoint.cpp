@@ -17,6 +17,16 @@ constexpr uint16_t kTempTolerance = 100;  // 1.00 C
 constexpr uint16_t kHumidityMinValue = 0;
 constexpr uint16_t kHumidityMaxValue = 10000;  // 100.00 %
 
+// Minimum cooling setpoint limit (ZCL units: value * 100). ZBOSS validates
+// incoming cooling-setpoint writes against the cluster's MinCool/AbsMinCool
+// setpoint-limit attributes, whose default floor is 0x0640 (16.00 C); a write
+// equal to that floor is rejected, so selecting 16 C in Z2M/Apple Home comes
+// back as INVALID_VALUE and never reaches the IR layer. Advertise a slightly
+// lower floor (15 C) so 16 C passes validation. This is not user-visible: the
+// Z2M converter exposes 16 C as the UI minimum and the IR encoder clamps to
+// 16..30 before transmitting.
+constexpr int16_t kCoolSetpointMinLimit = 1500;  // 15.00 C
+
 constexpr uint8_t kFanSequence =
     ESP_ZB_ZCL_FAN_CONTROL_FAN_MODE_SEQUENCE_LOW_MED_HIGH;
 // Cooling + heating so both setpoints and all modes are valid.
@@ -212,6 +222,16 @@ void GreeClimateEndpoint::buildClusters() {
     esp_zb_thermostat_cluster_add_attr(
         thermostat_cluster, ESP_ZB_ZCL_ATTR_THERMOSTAT_AC_LOUVER_POSITION_ID,
         &louver);
+    // Lower the cooling setpoint floor so 16 C is accepted (see
+    // kCoolSetpointMinLimit). MinCool must stay within AbsMinCool, so set both.
+    int16_t cool_min_limit = kCoolSetpointMinLimit;
+    esp_zb_thermostat_cluster_add_attr(
+        thermostat_cluster,
+        ESP_ZB_ZCL_ATTR_THERMOSTAT_ABS_MIN_COOL_SETPOINT_LIMIT_ID,
+        &cool_min_limit);
+    esp_zb_thermostat_cluster_add_attr(
+        thermostat_cluster,
+        ESP_ZB_ZCL_ATTR_THERMOSTAT_MIN_COOL_SETPOINT_LIMIT_ID, &cool_min_limit);
     addCluster("thermostat", esp_zb_cluster_list_add_thermostat_cluster(
                                  _cluster_list, thermostat_cluster,
                                  ESP_ZB_ZCL_CLUSTER_SERVER_ROLE));
