@@ -3,12 +3,37 @@
 #include <Arduino.h>
 
 #include <cmath>
+#include <cstring>
 
 #include "Config.h"
 
 namespace greebridge {
 
 namespace {
+
+// ZCL setpoint range for the Gree unit (value * 100): 16..30 C.
+constexpr int16_t kSetpointMin = 1600;  // 16.00 C
+constexpr int16_t kSetpointMax = 3000;  // 30.00 C
+
+// Replaces ZBOSS's built-in thermostat check, which hardcodes a 16 C cooling
+// floor. Accept the unit's 16..30 C setpoints. Return 0 = accept, else reject.
+int thermostatCheckValue(uint16_t attr_id, uint8_t /*endpoint*/,
+                         uint8_t* value) {
+    if (attr_id == ESP_ZB_ZCL_ATTR_THERMOSTAT_OCCUPIED_COOLING_SETPOINT_ID ||
+        attr_id == ESP_ZB_ZCL_ATTR_THERMOSTAT_OCCUPIED_HEATING_SETPOINT_ID) {
+        int16_t setpoint;
+        memcpy(&setpoint, value, sizeof(setpoint));
+        if (setpoint < kSetpointMin || setpoint > kSetpointMax) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+// No-op, but required: a null write_attr_cb makes the handler update fail with
+// ESP_ERR_INVALID_ARG (esp-zigbee-sdk #691).
+void thermostatWriteAttr(uint8_t /*endpoint*/, uint16_t /*attr_id*/,
+                         uint8_t* /*new_value*/, uint16_t /*manuf_code*/) {}
 
 // Measurement bounds (ZCL units: value * 100).
 constexpr int16_t kTempMinValue = -4000;  // -40.00 C
@@ -264,6 +289,21 @@ void GreeClimateEndpoint::publishClimate(float temperatureC, float humidityPct) 
     // Mirror room temperature into the thermostat's current temperature.
     setAttr(ESP_ZB_ZCL_CLUSTER_ID_THERMOSTAT,
             ESP_ZB_ZCL_ATTR_THERMOSTAT_LOCAL_TEMPERATURE_ID, &_localTemperature);
+}
+
+void GreeClimateEndpoint::installSetpointCheckOverride() {
+    esp_zb_zcl_custom_cluster_handlers_t handlers = {};
+    handlers.cluster_id = ESP_ZB_ZCL_CLUSTER_ID_THERMOSTAT;
+    handlers.cluster_role = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE;
+    handlers.check_value_cb = thermostatCheckValue;
+    handlers.write_attr_cb = thermostatWriteAttr;
+
+    esp_zb_lock_acquire(portMAX_DELAY);
+    esp_err_t err = esp_zb_zcl_custom_cluster_handlers_update(handlers);
+    esp_zb_lock_release();
+
+    Serial.printf("[Zigbee] Thermostat setpoint check override: %s\n",
+                  esp_err_to_name(err));
 }
 
 void GreeClimateEndpoint::notifyStateChanged() {

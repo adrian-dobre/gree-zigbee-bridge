@@ -72,6 +72,10 @@ void setup() {
     }
 
     Serial.println("Zigbee end device started");
+
+    // Accept the 16 C cooling setpoint; ZBOSS hardcodes a 16 C floor otherwise.
+    greeEndpoint.installSetpointCheckOverride();
+
     greeEndpoint.printState();
     Serial.println("Waiting to connect to a Zigbee network...");
 }

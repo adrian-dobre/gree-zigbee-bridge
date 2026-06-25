@@ -40,6 +40,10 @@ class GreeClimateEndpoint : public ZigbeeEP {
     // Push the latest room readings to the stack (after Zigbee.begin()).
     void publishClimate(float temperatureC, float humidityPct);
 
+    // Relax ZBOSS's hardcoded thermostat check_value (16 C cooling floor) to the
+    // unit's 16..30 C range. Call AFTER Zigbee.begin().
+    void installSetpointCheckOverride();
+
     const AcState& state() const { return _state; }
     void printState() const;
 
