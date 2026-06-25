@@ -175,6 +175,24 @@ const tzLocal = {
     },
 };
 
+// Single target temperature for the AC. It rides on the heating setpoint
+// attribute for two reasons: Z2M/Home Assistant discovery maps a climate's main
+// target temperature only to occupied_heating_setpoint/current_heating_setpoint,
+// and it is the only thermostat setpoint ZBOSS allows down to 16 C (the cooling
+// setpoint is hard-floored at 16 C inside the precompiled stack). Relabel it so
+// nothing user-facing reads "heating"; the property name and IR behaviour are
+// unaffected, and the single setpoint applies to every mode (cool/heat/etc).
+const climate = e.climate()
+    .withLocalTemperature()
+    .withSetpoint('occupied_heating_setpoint', 16, 30, 1)
+    .withSystemMode(['off', 'auto', 'cool', 'heat', 'dry', 'fan_only'])
+    .withFanMode(['off', 'low', 'medium', 'high', 'turbo', 'auto'])
+    // Apple Home oscillate toggle: on = vertical swing, off = fixed.
+    .withSwingMode(['off', 'on']);
+climate.features
+    .filter((f) => f.name === 'occupied_heating_setpoint')
+    .forEach((f) => f.withLabel('Setpoint'));
+
 const definition = {
     zigbeeModel: ['GreeG10-YT1F'],
     model: 'GreeG10-YT1F',
@@ -191,7 +209,6 @@ const definition = {
     toZigbee: [
         tz.on_off,
         tz.thermostat_system_mode,
-        tz.thermostat_occupied_cooling_setpoint,
         tz.thermostat_occupied_heating_setpoint,
         tz.thermostat_local_temperature,
         tzLocal.ac_louver_position,
@@ -201,14 +218,7 @@ const definition = {
     ],
     exposes: [
         e.switch(),
-        e.climate()
-            .withLocalTemperature()
-            .withSetpoint('occupied_cooling_setpoint', 16, 30, 1)
-            .withSetpoint('occupied_heating_setpoint', 16, 30, 1)
-            .withSystemMode(['off', 'auto', 'cool', 'heat', 'dry', 'fan_only'])
-            .withFanMode(['off', 'low', 'medium', 'high', 'turbo', 'auto'])
-            // Apple Home oscillate toggle: on = vertical swing, off = fixed.
-            .withSwingMode(['off', 'on']),
+        climate,
         e.temperature(),
         e.humidity(),
         // Dedicated turbo / maximum-airflow toggle. Backed by the same fanMode

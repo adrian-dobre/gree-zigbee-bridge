@@ -47,16 +47,13 @@ struct AcState {
     Mode mode = Mode::Cool;
     FanSpeed fan = FanSpeed::Auto;
     Swing swing = Swing::Auto;
-    uint8_t coolTempC = 24;  // cooling setpoint, valid range 16..30
-    uint8_t heatTempC = 24;  // heating setpoint, valid range 16..30
+    uint8_t targetTempC = 24;  // single target setpoint, valid range 16..30
 
-    // The AC takes a single target temperature per IR frame. The thermostat
-    // cluster keeps cooling and heating setpoints independently; pick the one
-    // that matches the active mode (heating uses the heat setpoint, every other
-    // mode uses the cool setpoint).
-    uint8_t activeTempC() const {
-        return mode == Mode::Heat ? heatTempC : coolTempC;
-    }
+    // The AC takes a single target temperature per IR frame, used for every
+    // mode. It is backed by the thermostat cluster's heating setpoint, the only
+    // setpoint ZBOSS allows down to 16 C (the cooling setpoint has a hardcoded
+    // 16 C-exclusive floor in the precompiled stack).
+    uint8_t activeTempC() const { return targetTempC; }
 
     bool operator==(const AcState& o) const {
         return power == o.power && mode == o.mode && fan == o.fan &&

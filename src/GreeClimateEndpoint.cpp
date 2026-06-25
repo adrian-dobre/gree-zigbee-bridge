@@ -17,16 +17,6 @@ constexpr uint16_t kTempTolerance = 100;  // 1.00 C
 constexpr uint16_t kHumidityMinValue = 0;
 constexpr uint16_t kHumidityMaxValue = 10000;  // 100.00 %
 
-// Minimum cooling setpoint limit (ZCL units: value * 100). ZBOSS validates
-// incoming cooling-setpoint writes against the cluster's MinCool/AbsMinCool
-// setpoint-limit attributes, whose default floor is 0x0640 (16.00 C); a write
-// equal to that floor is rejected, so selecting 16 C in Z2M/Apple Home comes
-// back as INVALID_VALUE and never reaches the IR layer. Advertise a slightly
-// lower floor (15 C) so 16 C passes validation. This is not user-visible: the
-// Z2M converter exposes 16 C as the UI minimum and the IR encoder clamps to
-// 16..30 before transmitting.
-constexpr int16_t kCoolSetpointMinLimit = 1500;  // 15.00 C
-
 constexpr uint8_t kFanSequence =
     ESP_ZB_ZCL_FAN_CONTROL_FAN_MODE_SEQUENCE_LOW_MED_HIGH;
 // Cooling + heating so both setpoints and all modes are valid.
@@ -154,16 +144,14 @@ GreeClimateEndpoint::GreeClimateEndpoint(uint8_t endpoint) : ZigbeeEP(endpoint) 
     _state.mode = Mode::Cool;
     _state.fan = FanSpeed::Auto;
     _state.swing = Swing::Auto;
-    _state.coolTempC = kInitialTargetTempC;
-    _state.heatTempC = kInitialTargetTempC;
+    _state.targetTempC = kInitialTargetTempC;
 
     _localTemperature = toZclTemperature(25.0f);
     _humidity = static_cast<uint16_t>(toZclTemperature(47.0f));
 }
 
 void GreeClimateEndpoint::buildClusters() {
-    int16_t cool_setpoint = static_cast<int16_t>(_state.coolTempC * 100);
-    int16_t heat_setpoint = static_cast<int16_t>(_state.heatTempC * 100);
+    int16_t setpoint = static_cast<int16_t>(_state.targetTempC * 100);
     uint8_t system_mode = toZclSystemMode(_state);
     uint8_t fan_mode = toZclFanMode(_state.fan);
     uint8_t louver = toZclLouver(_state.swing);
@@ -171,8 +159,8 @@ void GreeClimateEndpoint::buildClusters() {
 
     esp_zb_thermostat_cfg_t thermostat_cfg = ESP_ZB_DEFAULT_THERMOSTAT_CONFIG();
     thermostat_cfg.thermostat_cfg.local_temperature = _localTemperature;
-    thermostat_cfg.thermostat_cfg.occupied_cooling_setpoint = cool_setpoint;
-    thermostat_cfg.thermostat_cfg.occupied_heating_setpoint = heat_setpoint;
+    thermostat_cfg.thermostat_cfg.occupied_cooling_setpoint = setpoint;
+    thermostat_cfg.thermostat_cfg.occupied_heating_setpoint = setpoint;
     thermostat_cfg.thermostat_cfg.control_sequence_of_operation =
         kControlSequence;
     thermostat_cfg.thermostat_cfg.system_mode = system_mode;
@@ -222,29 +210,6 @@ void GreeClimateEndpoint::buildClusters() {
     esp_zb_thermostat_cluster_add_attr(
         thermostat_cluster, ESP_ZB_ZCL_ATTR_THERMOSTAT_AC_LOUVER_POSITION_ID,
         &louver);
-    // Lower the cooling setpoint floor so 16 C is accepted (see
-    // kCoolSetpointMinLimit). ZBOSS rejects a cooling-setpoint write below its
-    // built-in cool floor (0x0640 = 16.00 C) with INVALID_VALUE. The
-    // thermostat-specific add/update helpers don't accept the setpoint-limit
-    // attribute IDs, so the attributes are otherwise absent; declare them with
-    // the generic attribute API so ZBOSS validates against our lower floor.
-    // AbsMinCool is read-only and MinCool is read/write per the ZCL spec.
-    int16_t cool_min_limit = kCoolSetpointMinLimit;
-    esp_err_t abs_min_err = esp_zb_cluster_add_attr(
-        thermostat_cluster, ESP_ZB_ZCL_CLUSTER_ID_THERMOSTAT,
-        ESP_ZB_ZCL_ATTR_THERMOSTAT_ABS_MIN_COOL_SETPOINT_LIMIT_ID,
-        ESP_ZB_ZCL_ATTR_TYPE_S16, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY,
-        &cool_min_limit);
-    esp_err_t min_err = esp_zb_cluster_add_attr(
-        thermostat_cluster, ESP_ZB_ZCL_CLUSTER_ID_THERMOSTAT,
-        ESP_ZB_ZCL_ATTR_THERMOSTAT_MIN_COOL_SETPOINT_LIMIT_ID,
-        ESP_ZB_ZCL_ATTR_TYPE_S16, ESP_ZB_ZCL_ATTR_ACCESS_READ_WRITE,
-        &cool_min_limit);
-    if (abs_min_err != ESP_OK || min_err != ESP_OK) {
-        Serial.printf(
-            "[Zigbee] Failed to add cool setpoint limit attrs (abs=0x%x min=0x%x)\n",
-            static_cast<int>(abs_min_err), static_cast<int>(min_err));
-    }
     addCluster("thermostat", esp_zb_cluster_list_add_thermostat_cluster(
                                  _cluster_list, thermostat_cluster,
                                  ESP_ZB_ZCL_CLUSTER_SERVER_ROLE));
@@ -278,11 +243,11 @@ void GreeClimateEndpoint::buildClusters() {
 
 void GreeClimateEndpoint::printState() const {
     Serial.printf(
-        "AC State: power=%s mode=%u fan=%u swing=%u cool=%uC heat=%uC | "
+        "AC State: power=%s mode=%u fan=%u swing=%u target=%uC | "
         "room=%.2fC humidity=%.2f%%\n",
         _state.power ? "ON" : "OFF", static_cast<unsigned>(_state.mode),
         static_cast<unsigned>(_state.fan), static_cast<unsigned>(_state.swing),
-        _state.coolTempC, _state.heatTempC, _localTemperature / 100.0f,
+        _state.targetTempC, _localTemperature / 100.0f,
         _humidity / 100.0f);
 }
 
@@ -356,18 +321,11 @@ void GreeClimateEndpoint::handleThermostat(uint16_t attr, uint8_t type,
         long tempC = lround(value / 100.0);
         if (tempC < 16) tempC = 16;
         if (tempC > 30) tempC = 30;
-        // The cluster keeps cooling and heating setpoints independently; store
-        // whichever one was written. The IR layer later selects the setpoint
-        // matching the active mode (see AcState::activeTempC).
-        if (attr == ESP_ZB_ZCL_ATTR_THERMOSTAT_OCCUPIED_HEATING_SETPOINT_ID) {
-            _state.heatTempC = static_cast<uint8_t>(tempC);
-            Serial.printf("[Zigbee] Heating setpoint -> %uC\n",
-                          _state.heatTempC);
-        } else {
-            _state.coolTempC = static_cast<uint8_t>(tempC);
-            Serial.printf("[Zigbee] Cooling setpoint -> %uC\n",
-                          _state.coolTempC);
-        }
+        // Single target temperature, fed by whichever setpoint the coordinator
+        // writes. The converter drives the heating setpoint (its floor reaches
+        // 16 C), but accept the cooling setpoint too for robustness.
+        _state.targetTempC = static_cast<uint8_t>(tempC);
+        Serial.printf("[Zigbee] Setpoint -> %uC\n", _state.targetTempC);
         notifyStateChanged();
     } else if (attr == ESP_ZB_ZCL_ATTR_THERMOSTAT_AC_LOUVER_POSITION_ID &&
                type == ESP_ZB_ZCL_ATTR_TYPE_8BIT_ENUM) {
